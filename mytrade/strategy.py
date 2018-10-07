@@ -29,8 +29,8 @@ def get_volume(today_data):
     return today_data[:, 4]
 
 
-def float_equal_0(float_num):
-    return np.abs(float_num) < 0.000001
+def float_equal_int(float_num, int_num):
+    return np.abs(float_num-int_num) < 0.000001
 
 
 # Here is your main strategy function
@@ -64,10 +64,21 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
         memory.volume_list = list([get_volume(data)])
         # (0:asset_index, 1:buy_in_num, 2:buy_in_price, 3:trans_fee,
         # 4:time(minute), 5:balance_before, 6:balance_after)
-        memory.asset_metadata = {}
+        memory.expected_position = position_current
+        memory.last_position = position_current
+        memory.buy_in_asset_metadata = {}
+        memory.borrow_asset_metadata = {}
+        memory.will_operate_asset_data = {}
         for i in USE_ASSET_INDEX:
-            memory.asset_metadata[i] = list()
+            memory.buy_in_asset_metadata[i] = list()
+            memory.borrow_asset_metadata[i] = list()
+            memory.will_operate_asset_data[i] = list()
         memory.last_trans_asset_metadata = {}
+        memory.buy_in_asset_num = {}
+        memory.borrow_asset_num = {}
+        for i in USE_ASSET_INDEX:
+            memory.buy_in_asset_num[i] = 0
+            memory.borrow_asset_num[i] = 0
         return position_current, memory
 
     if 1 <= counter <= watch_back_window:
@@ -84,53 +95,67 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
     # SO we execute here after one minute
 
     # (0:asset_index, 1:buy_in_num(storage), 2:buy_in_price, 3:avg_cost,
-    # 4:time(minute), 5:cash_balance_before, 6:cash_balance_after,
-    # 7:asset_meta_to_operate_list)
-    for asset_idx in USE_ASSET_INDEX:
-        cur_volume = get_volume(data)[asset_idx]
-        cur_price = get_avg_price(data)[asset_idx]
-        # justify whether a trans occurred in last minute
-        if asset_idx in memory.last_trans_asset_metadata:
-            trans_volume = memory.last_trans_asset_metadata[asset_idx][1]
-            is_over_buy = np.abs(trans_volume) > cur_volume*0.25
-            trans_volume = np.sign(trans_volume)*cur_volume*0.25 if is_over_buy else trans_volume
-            # if volume > 0 (buy), record this operate as a buy
-            # else (sell), re-compute params of operated assets
-            if trans_volume > 0:
-                memory.last_trans_asset_metadata[asset_idx][1] = trans_volume
-                memory.last_trans_asset_metadata[asset_idx][2] = cur_price
-                memory.last_trans_asset_metadata[asset_idx][3] = (np.abs(trans_volume)*cur_price*(1.0+transaction))\
-                                                          / trans_volume
-                memory.last_trans_asset_metadata[asset_idx][6] = cash_balance
-                memory.asset_metadata[asset_idx].append(memory.last_trans_asset_metadata[asset_idx])
-            else:
-                proportion = []
-                is_one_asset_with_zero_storage = False
-                for tran_tuple in memory.last_trans_asset_metadata[asset_idx][7]:
-                    proportion.append(tran_tuple[0][1])
-                proportion = np.array(proportion, dtype=np.float64)/np.sum(proportion)
-                sell_volume = proportion * np.abs(trans_volume)
-                idx = 0
-                for tran_tuple in memory.last_trans_asset_metadata[asset_idx][7]:
-                    tran = tran_tuple[0]
-                    # delete storage volume by proportion
-                    tran[1] -= sell_volume[idx]
-                    if float_equal_0(tran[1]):
-                        is_one_asset_with_zero_storage = True
-                    idx += 1
+    # 4:time(minute), 5:cash_balance_before, 6:cash_balance_after)
+    position_delta = memory.expected_position - position_current
 
-                # there exists an asset with zero storage, find and delete it
-                if is_one_asset_with_zero_storage:
-                    memory.asset_metadata[asset_idx] = list(filter(lambda x: (not float_equal_0(x[1])),
-                                                              memory.asset_metadata[asset_idx]))
-            # clear it after finishing process it
-            del memory.last_trans_asset_metadata[asset_idx]
+    if (position_current == 0).sum() == len(position_current):
+        # clear all positions
+        memory.buy_in_asset_metadata.clear()
+        memory.borrow_asset_metadata.clear()
+    else:
+        # justify whether trans are cut
+        real_trans_volume = position_current - memory.last_position
+        expected_trans_volume = memory.expected_position - memory.last_position
+        # success proportion:
+        proportion = real_trans_volume / expected_trans_volume
+        for asset_idx in USE_ASSET_INDEX:
+            cur_price = get_avg_price(data)[asset_idx]
+            # justify whether a trans occurred in last minute
+            if asset_idx in memory.last_trans_asset_metadata:
+                for trans in memory.last_trans_asset_metadata[asset_idx]:
+                    trans_volume = trans[1]
+                    trans_volume = trans_volume * proportion[asset_idx]
+                    # if volume > 0 (buy), record this operate as a buy
+                    # else (borrow), re-compute params of operated assets
+                    trans[1] = trans_volume
+                    trans[2] = cur_price
+                    trans[3] = cur_price
+                    trans[4] = counter
+                    if trans_volume > 0:
+                        memory.buy_in_asset_metadata[asset_idx].append(trans)
+                    else:
+                        memory.borrow_asset_metadata[asset_idx].append(trans)
+            if asset_idx in memory.will_operate_asset_data:
+                for trans_tuple in memory.will_operate_asset_data[asset_idx]:
+                    trans_volume = trans_tuple[0][1]
+                    # all done. clean them in metadata record.
+                    # else, clean then append new one with less volume regarding to the proportion
+                    if trans_volume > 0:
+                        memory.buy_in_asset_metadata[asset_idx].remove(trans_tuple[0])
+                    else:
+                        memory.borrow_asset_metadata[asset_idx].remove(trans_tuple[0])
+
+                    if not float_equal_int(proportion[asset_idx], 1):
+                        new_trans = trans_tuple[0]
+                        new_trans[1] *= (1-proportion[asset_idx])
+                        if trans_volume > 0:
+                            memory.buy_in_asset_metadata[asset_idx].append(new_trans)
+                        else:
+                            memory.borrow_asset_metadata[asset_idx].append(new_trans)
+    # clean out-dated memory
+    memory.last_trans_asset_metadata.clear()
+    memory.will_operate_asset_data.clear()
+    memory.buy_in_asset_num = {}
+    memory.borrow_asset_num = {}
+
+
 
     # phase 2: build new transactions
 
     # buy-in strategy: check rise magnitude
     avg_price = get_avg_price(data)
     buy_in = np.array([0.0] * len(ALL_ASSET))
+    borrow = np.array([0.0] * len(ALL_ASSET))
     length_list = len(memory.avg_price_list)
     for i in USE_ASSET_INDEX:
         for diff_time in range(1, watch_back_window+1):
@@ -138,38 +163,69 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
                 buy_in[i] += buy_in_each_bitcoin
                 break
 
+    # to be design: borrow strategy
+    ###
+    ###
+
     # sell strategy: cut loss and cut profit
     will_operated_asset_metadata = {}
     for asset_idx in USE_ASSET_INDEX:
         will_operated_asset_metadata[asset_idx] = []
-        for idx in range(len(memory.asset_metadata[asset_idx])):
-            tran = memory.asset_metadata[asset_idx][idx]
+        # positive asset
+        for idx in range(len(memory.buy_in_asset_metadata[asset_idx])):
+            tran = memory.buy_in_asset_metadata[asset_idx][idx]
             asset_idx = tran[0]
             asset_num = tran[1]
             buy_in_price = tran[2]
+
             # stop profit
             if avg_price[asset_idx] - buy_in_price > stop_profit_dollar:
-                buy_in[asset_idx] -= asset_num
                 # if more information need to add, can add val with tran in tuple
                 will_operated_asset_metadata[asset_idx].append((tran, ))
+                position_new[asset_idx] -= asset_num
                 continue
 
             # stop loss
             if avg_price[asset_idx] - buy_in_price < -stop_loss_dollar:
-                buy_in[asset_idx] -= asset_num
                 # if more information need to add, can add val with tran in tuple
                 will_operated_asset_metadata[asset_idx].append((tran, ))
+                position_new[asset_idx] -= asset_num
                 continue
 
-    # try to execute buy-in
+        # negative asset
+        for idx in range(len(memory.borrow_asset_metadata[asset_idx])):
+            tran = memory.borrow_asset_metadata[asset_idx][idx]
+            asset_idx = tran[0]
+            asset_num = -tran[1]
+            borrow_price = tran[2]
+
+            # stop profit
+            if borrow_price - avg_price[asset_idx] > stop_profit_dollar:
+                # if more information need to add, can add val with tran in tuple
+                will_operated_asset_metadata[asset_idx].append((tran, ))
+                position_new[asset_idx] += asset_num
+                continue
+
+            # stop loss
+            if borrow_price - avg_price[asset_idx] < -stop_loss_dollar:
+                # if more information need to add, can add val with tran in tuple
+                will_operated_asset_metadata[asset_idx].append((tran, ))
+                position_new[asset_idx] += asset_num
+                continue
+
+    # try to execute buy-in & borrow & sell
     # (0:asset_index, 1:buy_in_num, 2:buy_in_price, 3:trans_fee,
-    # 4:time(minute), 5:cash_balance_before, 6:cash_balance_after,
-    # 7:asset_meta_to_operate_list)
+    # 4:time(minute), 5:cash_balance_before, 6:cash_balance_after)
+
     asset_metadata_will_valid = {}
-    cash_balance_after_transaction = 0.0
+    for asset_idx in USE_ASSET_INDEX:
+        asset_metadata_will_valid[asset_idx] = list()
+
+    # buy-in
+    cash_balance_after_transaction = cash_balance
     for asset_idx in USE_ASSET_INDEX:
         buy_in_num = buy_in[asset_idx]
-        if float_equal_0(buy_in_num):
+        if float_equal_int(buy_in_num, 0):
             continue
         buy_in_price = avg_price[asset_idx]
         trans_fee = buy_in_price * np.abs(buy_in_num) * transaction
@@ -177,14 +233,33 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
         cash_balance_before = cash_balance
         cash_balance_after = cash_balance - buy_in_num*buy_in_price - trans_fee
         cash_balance_after_transaction = cash_balance_after
-        asset_metadata_will_valid[asset_idx] = [asset_idx, buy_in_num, -1.0, -1.0, time,
-                                                cash_balance_before, -1.0, will_operated_asset_metadata[asset_idx]]
+        asset_metadata_will_valid[asset_idx].append([asset_idx, buy_in_num, -1.0, -1.0, time,
+                                                cash_balance_before, -1.0])
+        position_new[asset_idx] += buy_in_num
+
+    # borrow
+    for asset_idx in USE_ASSET_INDEX:
+        borrow_num = borrow[asset_idx]
+        if float_equal_int(borrow_num, 0):
+            continue
+        borrow_price = avg_price[asset_idx]
+        trans_fee = borrow_price * np.abs(borrow_num) * transaction
+        time = counter
+        cash_balance_before = cash_balance_after_transaction
+        cash_balance_after_transaction -= (borrow_num * borrow_price + trans_fee)
+        asset_metadata_will_valid[asset_idx].append([asset_idx, -borrow_num, -1.0, -1.0, time,
+                                                cash_balance_before, -1.0])
+        position_new[asset_idx] -= borrow_num
 
     # if valid, execute buy-in transaction
-    if cash_balance_after_transaction > my_cash_balance_lower_limit:
-        position_new = position_new + buy_in
+    # if cash_balance_after_transaction > my_cash_balance_lower_limit:
+    # ------ do not justify whether currency < 10000
+    if True:
+        memory.expected_position = position_new
+        memory.last_position = position_current
         # do not process meta to be invalid, process at next minute
         memory.last_trans_asset_metadata = asset_metadata_will_valid
+        memory.will_operate_asset_data = will_operated_asset_metadata
 
     # update memory
     memory.data_list.append(data[:])

@@ -8,12 +8,13 @@ import matplotlib
 
 # Change the working directory to your strategy folder.
 # You should change this directory below on your own computer accordingly.
-working_folder = '/Users/zbw0046/oneDrive/OneDrive - HKUST Connect/CourseWork/MSBD5013/Project/MSBD/python/mytrade'
+working_folder = 'D:\Dropbox\MAFS-2018\Python\demo1'
+
 
 # Write down your file paths for format 1 and format 2
 # Note: You can test your strategy on different periods. Try to make your strategy profitable stably.
-format1_dir = '/Users/zbw0046/oneDrive/OneDrive - HKUST Connect/CourseWork/MSBD5013/Project/MSBD/python/data/data_format1_20180916_20180923.h5'
-format2_dir = '/Users/zbw0046/oneDrive/OneDrive - HKUST Connect/CourseWork/MSBD5013/Project/MSBD/python/data/data_format2_20180916_20180923.h5'
+format1_dir = 'D:\Dropbox\MAFS-2018\\backTest\data\data_format1_20180924_20180930.h5'
+format2_dir = 'D:\Dropbox\MAFS-2018\\backTest\data\data_format2_20180924_20180930.h5'
 
 # The following code is for backtesting. DO NOT change it unless you want further exploration beyond the course project.
 # import your handle_bar function
@@ -115,7 +116,7 @@ class backTest:
             crypto_balance = np.sum(np.abs(position_new*average_price))
             total_balance = total_balance + revenue
             cash_balance = total_balance - crypto_balance
-            detail = np.append(position_new, list(average_price) + [cash_balance, crypto_balance, revenue, total_balance, transaction_cost])
+            detail = np.append(position_new, [cash_balance, crypto_balance, revenue, total_balance, transaction_cost])
             details.append(copy.deepcopy(detail))
 
             position_old = copy.deepcopy(position_new)
@@ -127,8 +128,10 @@ class backTest:
                 stop_signal = True
                 print("Current cash balance is lower than", self.cash_balance_lower_limit)
                 print("Your strategy is forced to stop")
+                print("System will soon close all your positions (long and short) on crypto currencies")
 
             if stop_signal:
+                position_new = np.repeat(0., 4)
                 if '09:30:00' in keys[i]:
                     print(keys[i][:10])
                 continue
@@ -148,8 +151,8 @@ class backTest:
             # Update position and timer
             if '09:30:00' in keys[i]:
                 print(keys[i][:10])
-        avg_price_title = map(lambda x: x+" avg price", copy.deepcopy(assets))
-        detailCol = assets + list(avg_price_title) + ["cash_balance", "crypto_balance", "revenue", "total_balance", "transaction_cost"]
+            
+        detailCol = assets + ["cash_balance", "crypto_balance", "revenue", "total_balance", "transaction_cost"]
         detailsDF = pd.DataFrame(details, index=pd.to_datetime(keys), columns=detailCol)
 
         format1.close()
