@@ -7,6 +7,7 @@
 # 2. When load files, ALWAYS use relative path such as "data/facility.pickle"
 # DO NOT use absolute path such as "C:/Users/Peter/Documents/project/data/facility.pickle"
 import numpy as np
+from copy import deepcopy
 # from auxiliary import generate_bar, white_soider, black_craw  # auxiliary is a local py file containing some functions
 
 my_cash_balance_lower_limit = 20000.  # Cutting-loss criterion
@@ -56,7 +57,7 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
     # You can also attach facility files such as text & image & table in your team folder to illustrate your idea
 
     # Get position of last minute
-    position_new = position_current
+    position_new = deepcopy(position_current)
 
     if counter == 0:
         memory.data_list = list([data[:]])  # only store last M minutes
@@ -97,17 +98,24 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
     # (0:asset_index, 1:buy_in_num(storage), 2:buy_in_price, 3:avg_cost,
     # 4:time(minute), 5:cash_balance_before, 6:cash_balance_after)
     position_delta = memory.expected_position - position_current
+    expected_trans_volume = memory.expected_position - memory.last_position
 
     if (position_current == 0).sum() == len(position_current):
         # clear all positions
-        memory.buy_in_asset_metadata.clear()
-        memory.borrow_asset_metadata.clear()
+        for i in ALL_ASSET:
+            memory.buy_in_asset_metadata[i] = list()
+            memory.borrow_asset_metadata[i] = list()
+    elif (expected_trans_volume == 0).sum() == len(expected_trans_volume):
+        # no trading at last time
+        pass
     else:
         # justify whether trans are cut
         real_trans_volume = position_current - memory.last_position
-        expected_trans_volume = memory.expected_position - memory.last_position
         # success proportion:
         proportion = real_trans_volume / expected_trans_volume
+        for i in range(len(proportion)):
+            if np.isnan(proportion[i]):
+                proportion[i] = 1.0
         for asset_idx in USE_ASSET_INDEX:
             cur_price = get_avg_price(data)[asset_idx]
             # justify whether a trans occurred in last minute
@@ -145,8 +153,9 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
     # clean out-dated memory
     memory.last_trans_asset_metadata.clear()
     memory.will_operate_asset_data.clear()
-    memory.buy_in_asset_num = {}
-    memory.borrow_asset_num = {}
+    for i in USE_ASSET_INDEX:
+        memory.buy_in_asset_num[i] = 0
+        memory.borrow_asset_num[i] = 0
 
 
 

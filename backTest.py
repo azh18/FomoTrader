@@ -8,13 +8,14 @@ import matplotlib
 
 # Change the working directory to your strategy folder.
 # You should change this directory below on your own computer accordingly.
-working_folder = 'D:\Dropbox\MAFS-2018\Python\demo1'
+current_dir = os.getcwd()
+working_folder = current_dir + '/mytrade'
 
 
 # Write down your file paths for format 1 and format 2
 # Note: You can test your strategy on different periods. Try to make your strategy profitable stably.
-format1_dir = 'D:\Dropbox\MAFS-2018\\backTest\data\data_format1_20180924_20180930.h5'
-format2_dir = 'D:\Dropbox\MAFS-2018\\backTest\data\data_format2_20180924_20180930.h5'
+format1_dir = current_dir + '/data/data_format1_20180923_20180930.h5'
+format2_dir = current_dir + '/data/data_format2_20180923_20180930.h5'
 
 # The following code is for backtesting. DO NOT change it unless you want further exploration beyond the course project.
 # import your handle_bar function
@@ -116,7 +117,7 @@ class backTest:
             crypto_balance = np.sum(np.abs(position_new*average_price))
             total_balance = total_balance + revenue
             cash_balance = total_balance - crypto_balance
-            detail = np.append(position_new, [cash_balance, crypto_balance, revenue, total_balance, transaction_cost])
+            detail = np.append(position_new, list(average_price) + [cash_balance, crypto_balance, revenue, total_balance, transaction_cost])
             details.append(copy.deepcopy(detail))
 
             position_old = copy.deepcopy(position_new)
@@ -151,8 +152,9 @@ class backTest:
             # Update position and timer
             if '09:30:00' in keys[i]:
                 print(keys[i][:10])
-            
-        detailCol = assets + ["cash_balance", "crypto_balance", "revenue", "total_balance", "transaction_cost"]
+
+
+        detailCol = assets + [s+'price' for s in assets] + ["cash_balance", "crypto_balance", "revenue", "total_balance", "transaction_cost"]
         detailsDF = pd.DataFrame(details, index=pd.to_datetime(keys), columns=detailCol)
 
         format1.close()
