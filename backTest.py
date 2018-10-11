@@ -60,6 +60,12 @@ class backTest:
         ret_hourly[0] = balance_hourly[0] / self.init_cash - 1
         ret_hourly.fillna(0, inplace=True)
 
+        balance_ratio = balance_hourly / 100000.
+        price = strategyDetail["BTC-USD_price"]
+        price_hourly = price.resample("H").last()
+        price_first = price[0]
+        price_ratio = price_hourly / price_first
+
         balance_daily = balance.resample("D").last()
         ret_daily = balance_daily.pct_change()
         ret_daily[0] = balance_daily[0] / self.init_cash - 1
@@ -77,6 +83,14 @@ class backTest:
 
         balance_hourly.plot(figsize=(12, 3), title='Balance Curve', grid=True)
         matplotlib.pyplot.show(block=True)
+
+        balance_ratio.plot(figsize=(24,6), title='Balance/Price Curve', grid=True)
+        price_ratio.plot(figsize=(24,6), title='Balance/Price Curve', grid=True)
+        matplotlib.pyplot.show(block=True)
+
+
+
+
 
         pass
 
@@ -154,7 +168,7 @@ class backTest:
                 print(keys[i][:10])
 
 
-        detailCol = assets + [s+'price' for s in assets] + ["cash_balance", "crypto_balance", "revenue", "total_balance", "transaction_cost"]
+        detailCol = assets + [s+'_price' for s in assets] + ["cash_balance", "crypto_balance", "revenue", "total_balance", "transaction_cost"]
         detailsDF = pd.DataFrame(details, index=pd.to_datetime(keys), columns=detailCol)
 
         format1.close()

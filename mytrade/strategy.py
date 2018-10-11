@@ -15,10 +15,10 @@ ALL_ASSET = [0, 1, 2, 3]
 USE_ASSET_INDEX = [1]
 
 
-watch_back_window = 5
-buy_in_each_bitcoin = 1
+watch_back_window = 3
+buy_in_each_bitcoin = 0.1
 buy_in_signal_dollar = 5
-stop_loss_dollar = 3
+stop_loss_dollar = 10000
 stop_profit_dollar = 10
 
 
