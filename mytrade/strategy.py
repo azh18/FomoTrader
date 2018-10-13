@@ -20,6 +20,9 @@ buy_in_each_bitcoin = 0.1
 buy_in_signal_dollar = 5
 stop_loss_dollar = 10000
 stop_profit_dollar = 10
+borrow_in_signal_dollar = 5
+borrow_each_bitcoin = 0.1
+
 
 
 def get_avg_price(today_data):
@@ -174,6 +177,11 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
 
     # to be design: borrow strategy
     ###
+    for i in USE_ASSET_INDEX:
+        for diff_time in range(1, watch_back_window+1):
+            if avg_price[i] - memory.avg_price_list[length_list-diff_time][i] <= -borrow_in_signal_dollar:
+                borrow[i] += borrow_each_bitcoin
+                break
     ###
 
     # sell strategy: cut loss and cut profit
