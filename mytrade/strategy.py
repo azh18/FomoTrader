@@ -10,7 +10,7 @@ import numpy as np
 from copy import deepcopy
 # from auxiliary import generate_bar, white_soider, black_craw  # auxiliary is a local py file containing some functions
 
-my_cash_balance_lower_limit = 20000.  # Cutting-loss criterion
+my_cash_balance_lower_limit = 10000.  # Cutting-loss criterion
 ALL_ASSET = [0, 1, 2, 3]
 USE_ASSET_INDEX = [1]
 
@@ -271,12 +271,18 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
     # if valid, execute buy-in transaction
     # if cash_balance_after_transaction > my_cash_balance_lower_limit:
     # ------ do not justify whether currency < 10000
-    if True:
+    cash_after_transaction = cash_balance
+    for i in USE_ASSET_INDEX:
+        cash_after_transaction -= \
+            ((np.abs(position_new[i]) - np.abs(position_current[i])) * avg_price[i]) * (1+transaction)
+    if cash_after_transaction > my_cash_balance_lower_limit + 1000:
         memory.expected_position = position_new
         memory.last_position = position_current
         # do not process meta to be invalid, process at next minute
         memory.last_trans_asset_metadata = asset_metadata_will_valid
         memory.will_operate_asset_data = will_operated_asset_metadata
+    else:
+        position_new = position_current
 
     # update memory
     memory.data_list.append(data[:])
