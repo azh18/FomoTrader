@@ -14,8 +14,8 @@ working_folder = current_dir + '/mytrade'
 
 # Write down your file paths for format 1 and format 2
 # Note: You can test your strategy on different periods. Try to make your strategy profitable stably.
-format1_dir = current_dir + '/data/data_format1_201808.h5'
-format2_dir = current_dir + '/data/data_format2_201808.h5'
+format1_dir = current_dir + '/data/data_format1_20181007_20181014.h5'
+format2_dir = current_dir + '/data/data_format2_20181007_20181014.h5'
 
 # The following code is for backtesting. DO NOT change it unless you want further exploration beyond the course project.
 # import your handle_bar function

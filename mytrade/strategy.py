@@ -275,7 +275,7 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
     for i in USE_ASSET_INDEX:
         cash_after_transaction -= \
             ((np.abs(position_new[i]) - np.abs(position_current[i])) * avg_price[i]) * (1+transaction)
-    if cash_after_transaction > my_cash_balance_lower_limit + 1000:
+    if cash_after_transaction > my_cash_balance_lower_limit + 5000:
         memory.expected_position = position_new
         memory.last_position = position_current
         # do not process meta to be invalid, process at next minute
