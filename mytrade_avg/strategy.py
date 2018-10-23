@@ -72,19 +72,6 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
         # 4:time(minute), 5:balance_before, 6:balance_after)
         memory.expected_position = position_current
         memory.last_position = position_current
-        memory.buy_in_asset_metadata = {}
-        memory.borrow_asset_metadata = {}
-        memory.will_operate_asset_data = {}
-        for i in USE_ASSET_INDEX:
-            memory.buy_in_asset_metadata[i] = list()
-            memory.borrow_asset_metadata[i] = list()
-            memory.will_operate_asset_data[i] = list()
-        memory.last_trans_asset_metadata = {}
-        memory.buy_in_asset_num = {}
-        memory.borrow_asset_num = {}
-        for i in USE_ASSET_INDEX:
-            memory.buy_in_asset_num[i] = 0
-            memory.borrow_asset_num[i] = 0
         return position_current, memory
 
     if 1 <= counter <= watch_back_window:
@@ -99,7 +86,6 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
     # .. because the transaction volume of last second may exceed 0.25*max
     # .. and the price has changed compared to the last minute
     # SO we execute here after one minute
-
     expected_trans_volume = memory.expected_position - memory.last_position
     position_last = memory.last_position
 
@@ -149,38 +135,55 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
                                                                                         position_current[asset_idx]
 
     # phase 2: build new transactions based on Cost_total and previous price
-    # buy-in strategy: check rise magnitude
     avg_price = get_avg_price(data)
-    buy_in = np.array([0.0] * len(ALL_ASSET))
-    borrow = np.array([0.0] * len(ALL_ASSET))
+    buy_in, borrow_in = False, False
     length_list = len(memory.avg_price_list)
-    for i in USE_ASSET_INDEX:
-        for diff_time in range(1, watch_back_window + 1):
-            if avg_price[i] - memory.avg_price_list[length_list - diff_time][i] >= buy_in_signal_dollar:
-                buy_in[i] += buy_in_each_bitcoin
-                break
-
-    # borrow strategy
-    ###
-    for i in USE_ASSET_INDEX:
-        for diff_time in range(1, watch_back_window + 1):
-            if avg_price[i] - memory.avg_price_list[length_list - diff_time][i] <= -borrow_in_signal_dollar:
-                borrow[i] += borrow_each_bitcoin
-                break
-    # TODO: sell strategy based on avg cost
-    ###
-    # sell strategy: cut loss and cut profit
     for asset_idx in USE_ASSET_INDEX:
-        pass
+        # buy-in strategy: check rise magnitude
+        for diff_time in range(1, watch_back_window + 1):
+            if avg_price[asset_idx] - memory.avg_price_list[length_list - diff_time][asset_idx] >= buy_in_signal_dollar:
+                buy_in = True
+                position_new[asset_idx] += buy_in_each_bitcoin
+                break
+        if buy_in:
+            continue
+        # borrow strategy
+        ###
+        for diff_time in range(1, watch_back_window + 1):
+            if avg_price[asset_idx] - memory.avg_price_list[length_list - diff_time][asset_idx] <= -borrow_in_signal_dollar:
+                borrow_in = True
+                position_new[asset_idx] -= borrow_each_bitcoin
+                break
+        if borrow_in:
+            continue
 
-    # Todo: correct this based on new design
+        # sell strategy based on avg cost
+        ###
+        stop_profit_proportion = 0.2
+        stop_loss_proportion = 0.2
+        # sell strategy: cut loss and cut profit
+        if position_current[asset_idx] > 0:
+            # positive position
+            profit_unit = avg_price[asset_idx] - avg_cost[asset_idx]
+            if profit_unit > stop_profit_dollar:
+                position_new[asset_idx] -= position_current[asset_idx] * stop_profit_proportion
+            elif profit_unit < -stop_loss_dollar:
+                position_new[asset_idx] -= position_current[asset_idx] * stop_loss_proportion
+        else:
+            # negative position
+            profit_unit = avg_cost[asset_idx] - avg_price[asset_idx]
+            if profit_unit > stop_profit_dollar:
+                position_new[asset_idx] -= position_current[asset_idx] * stop_profit_proportion
+            elif profit_unit < -stop_loss_dollar:
+                position_new[asset_idx] -= position_current[asset_idx] * stop_loss_proportion
+
     # if valid, execute buy-in transaction
     # if cash_balance_after_transaction > my_cash_balance_lower_limit:
     # ------ do not justify whether currency < 10000
     cash_after_transaction = cash_balance
-    for i in USE_ASSET_INDEX:
+    for asset_idx in USE_ASSET_INDEX:
         cash_after_transaction -= \
-            ((np.abs(position_new[i]) - np.abs(position_current[i])) * avg_price[i]) * (1 + transaction)
+            ((np.abs(position_new[asset_idx]) - np.abs(position_current[asset_idx])) * avg_price[asset_idx]) * (1 + transaction)
     if cash_after_transaction > my_cash_balance_lower_limit + 5000:
         memory.expected_position = position_new
         memory.last_position = position_current

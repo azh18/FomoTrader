@@ -9,7 +9,7 @@ import matplotlib
 # Change the working directory to your strategy folder.
 # You should change this directory below on your own computer accordingly.
 current_dir = os.getcwd()
-working_folder = current_dir + '/mytrade'
+working_folder = current_dir + '/mytrade_avg'
 
 
 # Write down your file paths for format 1 and format 2
