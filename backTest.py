@@ -87,11 +87,6 @@ class backTest:
         balance_ratio.plot(figsize=(24,6), title='Balance/Price Curve', grid=True)
         price_ratio.plot(figsize=(24,6), title='Balance/Price Curve', grid=True)
         matplotlib.pyplot.show(block=True)
-
-
-
-
-
         pass
 
     def backTest(self):

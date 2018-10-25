@@ -17,11 +17,16 @@ USE_ASSET_INDEX = [1]
 
 watch_back_window = 3
 buy_in_each_bitcoin = 0.1
+borrow_each_bitcoin = 0.1
+
 buy_in_signal_dollar = 5
+borrow_in_signal_dollar = 5
+
 stop_loss_dollar = 10000
 stop_profit_dollar = 10
-borrow_in_signal_dollar = 5
-borrow_each_bitcoin = 0.1
+
+stop_loss_proportion_thres = .005
+stop_profit_proportion_thres = .005
 
 
 def get_avg_price(today_data):
@@ -159,23 +164,26 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
 
         # sell strategy based on avg cost
         ###
-        stop_profit_proportion = 0.2
-        stop_loss_proportion = 0.2
+        sell_unit = .01
         # sell strategy: cut loss and cut profit
         if position_current[asset_idx] > 0:
             # positive position
             profit_unit = avg_price[asset_idx] - avg_cost[asset_idx]
-            if profit_unit > stop_profit_dollar:
-                position_new[asset_idx] -= position_current[asset_idx] * stop_profit_proportion
-            elif profit_unit < -stop_loss_dollar:
-                position_new[asset_idx] -= position_current[asset_idx] * stop_loss_proportion
+            # if profit_unit > stop_profit_dollar:
+            if profit_unit / avg_cost[asset_idx] > stop_profit_proportion_thres:
+                position_new[asset_idx] -= sell_unit
+            # elif profit_unit < -stop_loss_dollar:
+            elif profit_unit / avg_cost[asset_idx] < -stop_loss_proportion_thres:
+                position_new[asset_idx] -= sell_unit
         else:
             # negative position
             profit_unit = avg_cost[asset_idx] - avg_price[asset_idx]
-            if profit_unit > stop_profit_dollar:
-                position_new[asset_idx] -= position_current[asset_idx] * stop_profit_proportion
-            elif profit_unit < -stop_loss_dollar:
-                position_new[asset_idx] -= position_current[asset_idx] * stop_loss_proportion
+            # if profit_unit > stop_profit_dollar:
+            if profit_unit / avg_cost[asset_idx] > stop_profit_proportion_thres:
+                position_new[asset_idx] += sell_unit
+            # elif profit_unit < -stop_loss_dollar:
+            elif profit_unit / avg_cost[asset_idx] < -stop_loss_proportion_thres:
+                position_new[asset_idx] += sell_unit
 
     # if valid, execute buy-in transaction
     # if cash_balance_after_transaction > my_cash_balance_lower_limit:
