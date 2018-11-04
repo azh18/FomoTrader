@@ -20,7 +20,7 @@ from talib import abstract
 
 my_cash_balance_lower_limit = 10000.  # Cutting-loss criterion
 ALL_ASSET = [0, 1, 2, 3]
-USE_ASSET_INDEX = [0, 1, 2, 3]
+USE_ASSET_INDEX = [1]
 
 # USE_ASSET_INDEX = [1]
 # buy_one = [0.01, 0.001, 0.02, 0.01]
@@ -562,13 +562,14 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
     buy_in, borrow_in = False, False
     for asset_idx in USE_ASSET_INDEX:
         #
-        if counter % TRADE_INTERVAL == 0:
+
+        if counter % TRADE_INTERVAL != 0:
             continue
 
 
         # Strategy paramter
         STRAREGY_1 = True
-        STRAREGY_1_ONLY = False
+        STRAREGY_1_ONLY = True
         TAKE_PROFIT = True
         CROSS_JUDGE = True
 
