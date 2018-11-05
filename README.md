@@ -18,3 +18,8 @@ buy factor
 buy one
 sell one
 TimeInterval
+
+## TODO:
+* Add LSTM or Attention Model to assit predict trend
+* Add Ensemble learning to make our strategy more optimised and stable
+* Add a reasonable position control strategy 
