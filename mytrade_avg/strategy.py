@@ -248,24 +248,28 @@ def get_transaction_cost(volume, trade_price, ratio):
 
 
 factor_limit = 100000
+# def getSellFactor(crypto_balance, factor):
 def getSellFactor(pos, factor):
-    if pos > 0:
-        factor = factor * (pos/factor_limit+1)
-    elif float_equal_int(pos, 0) :
-        return factor
-    else:
-        factor = factor / (abs(pos)/factor_limit+1)
-    # d(factor)
     return factor
+    # if pos > 0:
+    #     factor = factor * (pos/factor_limit+1)
+    # elif float_equal_int(pos, 0) :
+    #     return factor
+    # else:
+    #     factor = factor / (abs(pos)/factor_limit+1)
+    # # d(factor)
+    # return factor
+# def getBuyFactor(cash_balance, factor):
 def getBuyFactor(pos, factor):
-    if pos < 0:
-        factor = factor * (abs(pos)/factor_limit+1)
-    elif float_equal_int(pos, 0):
-        return factor
-    else:
-        factor = factor / (pos/factor_limit+1)
-    # d(factor)
     return factor
+    # if pos < 0:
+    #     factor = factor * (abs(pos)/factor_limit+1)
+    # elif float_equal_int(pos, 0):
+    #     return factor
+    # else:
+    #     factor = factor / (pos/factor_limit+1)
+    # # d(factor)
+    # return factor
 
 
 
@@ -569,17 +573,17 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
 
         # Strategy paramter
         STRAREGY_1 = True
-        STRAREGY_1_ONLY = True
+        STRAREGY_1_ONLY = False
         TAKE_PROFIT = True
-        CROSS_JUDGE = True
+        CROSS_JUDGE =  True
 
         STRAREGY_Trend_Judge = True
 
         sell_factor = 2
         buy_factor = 2
-
-        # buy_one = [0.01, 0.01, 0.02, 0.01]
-        buy_one = [0.01, 0.001, 0.1, 0.1]
+#
+        buy_one = [0.01, 0.01, 0.02, 0.01]
+        # buy_one = [0.01, 0.001, 0.1, 0.1]
         buy_one = list(map(lambda x: x * TRADE_INTERVAL, buy_one))
         sell_one = buy_one
 
@@ -597,8 +601,9 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
 
             MACD_ON = True
             BBANDS_ON = True
+            RSI_ON = True
 
-            time_interval_index = 2
+            time_interval_index = 1
 
             interval = data_time_interval[time_interval_index]
             price = memory.timed_average_prices[0][asset_idx][-1]
@@ -620,6 +625,17 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
                     # d(memory.timed_macds[2][asset_idx])
                     macd = memory.timed_macds[time_interval_index][asset_idx][-1]
                     if macd > 0:
+                        bull += 1
+                    else:
+                        bear += 1
+
+            if RSI_ON == True:
+                rsi_start_time = rsi_lookback_window * interval
+                if counter > start_time + 66:
+                    # d(memory.timed_macds[2][asset_idx])
+                    rsi_value = memory.timed_rsi[time_interval_index][asset_idx][-1]
+                    rsi = get_RSI_sig(rsi_value)
+                    if  rsi > 0:
                         bull += 1
                     else:
                         bear += 1
@@ -655,7 +671,7 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
 
         if STRAREGY_1  == True:
             # time interval index = 1, means 5 min
-            time_interval_index= 1
+            time_interval_index= 0
 
             local_time_interval = data_time_interval[time_interval_index]
 
@@ -696,10 +712,13 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
             # votes = macd
             # votes = stoch
             # votes = 0
+            # votes = rsi
+            # votes = rsi + bbands
 
 
             # cross
             # in shock market this strategy maybe will produce so many fake signals
+            local_time_interval = 1
             if long_trend != 0 and CROSS_JUDGE:
                 cross_cnt = 2
                 if counter > (macd_lookback_window * 2) * local_time_interval:
