@@ -32,9 +32,14 @@ USE_ASSET_INDEX = [1]
 
 
 buy_in_each_bitcoin = 0.1
+borrow_each_bitcoin = 0.1
+
 buy_in_signal_dollar = 5
+borrow_in_signal_dollar = 5
+
 stop_loss_dollar = 10000
 stop_profit_dollar = 10
+
 borrow_in_signal_dollar = 5
 borrow_each_bitcoin = 0.3
 
@@ -51,6 +56,7 @@ atr_lookback_window = 15
 cols = ['counter', 'open', 'high', 'low', 'close', 'average', 'volume']
 
 min_profit = 0.001
+
 
 
 def get_avg_price(today_data):
@@ -820,7 +826,6 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
 
         if STRAREGY_1_ONLY == True:
             continue
-
         if TAKE_PROFIT == True:
             profit_unit = -1
 

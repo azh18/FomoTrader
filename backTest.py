@@ -120,6 +120,7 @@ class backTest:
         plt.subplot(2, 1, 1)
         balance_ratio.plot(figsize=(24,6), title='Balance/Price Curve', grid=True)
         price_ratio.plot(figsize=(24,6), title='Balance/Price Curve', grid=True)
+
         plt.ioff()
 
         #
