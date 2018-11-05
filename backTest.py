@@ -4,18 +4,47 @@ import numpy as np
 import copy
 import os
 import sys
+import operator
+
 import matplotlib
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
+
 
 # Change the working directory to your strategy folder.
 # You should change this directory below on your own computer accordingly.
+matplotlib.interactive(False)
 current_dir = os.getcwd()
 working_folder = current_dir + '/mytrade_avg'
 
 
 # Write down your file paths for format 1 and format 2
 # Note: You can test your strategy on different periods. Try to make your strategy profitable stably.
-format1_dir = current_dir + '/data/data_format1_20181007_20181014.h5'
-format2_dir = current_dir + '/data/data_format2_20181007_20181014.h5'
+format1_dir = None
+format2_dir = None
+data_num = 3
+if data_num == 1:
+    # one laterial sudden drop
+    format1_dir = current_dir + '/data/data_format1_20181007_20181014.h5'
+    format2_dir = current_dir + '/data/data_format2_20181007_20181014.h5'
+elif data_num == 2:
+    # one laterial sudden up
+    format1_dir = current_dir + '/data/data_format1_20181014_20181021.h5'
+    format2_dir = current_dir + '/data/data_format2_20181014_20181021.h5'
+elif data_num == 3:
+    # one laterial sudden drop
+    format1_dir = current_dir + '/data/data_format1_20180901_20180909.h5'
+    format2_dir = current_dir + '/data/data_format2_20180901_20180909.h5'
+elif data_num == 4:
+    format1_dir = current_dir + '/data/data_format1_201807.h5'
+    format2_dir = current_dir + '/data/data_format2_201807.h5'
+elif data_num == 5:
+    format1_dir = current_dir + '/data/data_format1_20181021_20181028.h5'
+    format2_dir = current_dir + '/data/data_format2_20181021_20181028.h5'
+elif data_num == 6:
+    format1_dir = current_dir + '/data/data_format1_20181028_20181104.h5'
+    format2_dir = current_dir + '/data/data_format2_20181028_20181104.h5'
+# 
 
 # The following code is for backtesting. DO NOT change it unless you want further exploration beyond the course project.
 # import your handle_bar function
@@ -66,6 +95,8 @@ class backTest:
         price_first = price[0]
         price_ratio = price_hourly / price_first
 
+        pos = strategyDetail['BTC-USD']
+
         balance_daily = balance.resample("D").last()
         ret_daily = balance_daily.pct_change()
         ret_daily[0] = balance_daily[0] / self.init_cash - 1
@@ -81,15 +112,155 @@ class backTest:
         print("Sharpe Ratio: ", sharpe_ratio)
         print("Maximum Drawdown: ", max_drawdown)
 
-        balance_hourly.plot(figsize=(12, 3), title='Balance Curve', grid=True)
-        matplotlib.pyplot.show(block=True)
 
+        # balance_hourly.plot(figsize=(12, 3), title='Balance Curve', grid=True)
+        # plt.ioff()
+        # matplotlib.pyplot.show(block=True)
+
+        plt.subplot(2, 1, 1)
         balance_ratio.plot(figsize=(24,6), title='Balance/Price Curve', grid=True)
         price_ratio.plot(figsize=(24,6), title='Balance/Price Curve', grid=True)
-        matplotlib.pyplot.show(block=True)
+        plt.ioff()
+
+        #
+        #
+        plt.subplot(2, 1, 2)
+
+        pos.plot(figsize=(24,6), title='position Curve', grid=True)
+        plt.ioff()
+        matplotlib.pyplot.show(block = True)
+
+        # for i in range(0, 4):
+        #     plt.subplot(4, 1, i+1)
+        #     minute_prices = self.memory.timed_average_prices[0][i]
+        #     xaxis = np.linspace(1, len(minute_prices), len(minute_prices))
+        #     plt.plot(xaxis, minute_prices)
+        # plt.show()
+
+        watch_back_window = 35
+        rsi_lookback_window = 15
+        macd_lookback_window = 34
+        bbands_lookback_window = 15
+        stoch_lookback_window = 10
+        atr_lookback_window = 15
+        data_time_interval = [1, 5, 60]
+
+        rows = 10
+        cnt = 1
+        plt.subplot(rows, 1, cnt)
+        minute_prices = self.memory.timed_average_prices[1][1]
+        xaxis = np.linspace(1, len(minute_prices), len(minute_prices))
+        plt.plot(xaxis, minute_prices)
+
+
+        cnt+=1
+        plt.subplot(rows, 1, cnt)
+        values = self.memory.timed_macds[2][1]
+        zeros = np.zeros(macd_lookback_window)
+        values = np.concatenate((zeros, values), axis=0)
+        xaxis = np.linspace(1, len(values), len(values))
+        plt.plot(xaxis, values)
+
+        cnt +=1
+        plt.subplot(rows, 1, cnt)
+        values = self.memory.timed_macds[1][1]
+        zeros = np.zeros(macd_lookback_window)
+        values = np.concatenate((zeros, values), axis=0)
+        xaxis = np.linspace(1, len(values), len(values))
+        plt.plot(xaxis, values)
+
+        cnt+=1
+        plt.subplot(rows, 1, cnt)
+        values = self.memory.timed_rsi[1][1]
+        zeros = np.zeros(rsi_lookback_window)
+        values = np.concatenate((zeros, values), axis=0)
+        xaxis = np.linspace(1, len(values), len(values))
+        plt.plot(xaxis, values)
+
+        cnt+=1
+        plt.subplot(rows, 1, cnt)
+        values = self.memory.timed_rsi[2][1]
+        zeros = np.zeros(rsi_lookback_window )
+        values = np.concatenate((zeros, values), axis=0)
+        xaxis = np.linspace(1, len(values), len(values))
+        plt.plot(xaxis, values)
+
+        cnt+=1
+        plt.subplot(rows, 1, cnt)
+        values = self.memory.timed_stochds[1][1]
+        zeros = np.zeros(stoch_lookback_window)
+        values = np.concatenate((zeros, values), axis=0)
+        xaxis = np.linspace(1, len(values), len(values))
+        plt.plot(xaxis, values)
+
+        cnt+=1
+        plt.subplot(rows, 1, cnt)
+        values = self.memory.timed_stochks[1][1]
+        zeros = np.zeros(stoch_lookback_window)
+        values = np.concatenate((zeros, values), axis=0)
+        xaxis = np.linspace(1, len(values), len(values))
+        plt.plot(xaxis, values)
+
+        cnt+=1
+        plt.subplot(rows, 1, cnt)
+        A = self.memory.timed_stochks[1][1]
+        B = self.memory.timed_stochds[1][1]
+
+        def cmp(x1, x2):
+            if x1 >90 and x2 > 90:
+                return 1
+            elif x1 < 10 and x2 < 10:
+                return -1
+            return 0
+        C = list(map(cmp, A, B))
+        values =  C
+        zeros = np.zeros(stoch_lookback_window)
+        values = np.concatenate((zeros, values), axis=0)
+        xaxis = np.linspace(1, len(values), len(values))
+        plt.plot(xaxis, values)
+
+        plt.grid()
+
+        matplotlib.pyplot.show()
+        # input()
 
 
 
+        # Draw bbands graph
+        # cnt = 0
+        # time_index = 1
+        #
+        # minute_prices = self.memory.timed_average_prices[time_index][1]
+        # minute_prices = minute_prices[bbands_lookback_window + 1:]
+        # xaxis = np.linspace(1, len(minute_prices), len(minute_prices))
+        # plt.plot(xaxis, minute_prices)
+        #
+        # values = self.memory.timed_lowerbs[time_index][1]
+        # # zeros = np.zeros(bbands_lookback_window)
+        # # values = np.concatenate((zeros, values), axis=0)
+        # xaxis = np.linspace(1, len(values), len(values))
+        # plt.plot(xaxis, values)
+        #
+        # values = self.memory.timed_higherbs[time_index][1]
+        # # zeros = np.zeros(bbands_lookback_window)
+        # # values = np.concatenate((zeros, values), axis=0)
+        # xaxis = np.linspace(1, len(values), len(values))
+        # plt.plot(xaxis, values)
+        #
+        # plt.show()
+
+        #
+        # values = self.memory.timed_lowerbs[2][1]
+        # zeros = np.zeros(bbands_lookback_window)
+        # values = np.concatenate((zeros, values), axis=0)
+        # xaxis = np.linspace(1, len(values), len(values))
+        # plt.plot(xaxis, values)
+        #
+        # values = self.memory.timed_higherbs[2][1]
+        # zeros = np.zeros(bbands_lookback_window)
+        # values = np.concatenate((zeros, values), axis=0)
+        # xaxis = np.linspace(1, len(values), len(values))
+        # plt.plot(xaxis, values)
 
 
         pass
@@ -108,6 +279,9 @@ class backTest:
         format2 = h5py.File(self.data_format2_path, mode='r')
         assets = list(format1.keys())
         keys = list(format2.keys())
+
+        # limit = 1000
+        # keys = keys[800:2000]
 
         for i in range(len(keys)):
             data_cur_min = format2[keys[i]][:]
@@ -134,6 +308,7 @@ class backTest:
             detail = np.append(position_new, list(average_price) + [cash_balance, crypto_balance, revenue, total_balance, transaction_cost])
             details.append(copy.deepcopy(detail))
 
+
             position_old = copy.deepcopy(position_new)
             average_price_old = copy.deepcopy(average_price)
 
@@ -150,7 +325,7 @@ class backTest:
                 if '09:30:00' in keys[i]:
                     print(keys[i][:10])
                 continue
-            
+
             # Update position and memory
             [position_new, self.memory] = handle_bar(i,
                                                      keys[i],
@@ -170,6 +345,7 @@ class backTest:
 
         detailCol = assets + [s+'_price' for s in assets] + ["cash_balance", "crypto_balance", "revenue", "total_balance", "transaction_cost"]
         detailsDF = pd.DataFrame(details, index=pd.to_datetime(keys), columns=detailCol)
+
 
         format1.close()
         format2.close()
