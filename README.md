@@ -11,3 +11,10 @@ Directly run backTest.py to get the result based on the recent dataset.
 * Trade Strategy based on indicators' special crosses
 * Trade Strategy based on ROI (Take Profit Strategy)
 * Trend Judge Strategy based on long time indictors
+
+## Sensitive parameters
+sell factor
+buy factor
+buy one
+sell one
+TimeInterval
