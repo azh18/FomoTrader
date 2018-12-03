@@ -535,8 +535,10 @@ for data_idx in range(len(data_collect)):
         if i % 100 == 0:
             print(keys[i])
         if i/10000 > 1 and i % 10000 == 0:
-            mem_obj.records.to_csv("feature_all.csv")
-            pkl.dump(mem_obj, open("price_feature_dataset_partial.pkl", "wb"))
+            dt_no = i/10000
+            mem_obj.records.to_csv("feature_all_%d.csv" % dt_no)
+            pkl.dump(mem_obj.records, open("price_feature_dataset_partial_%d.pkl" % dt_no, "wb"))
+            mem_obj.records = None
             # print(data_cur_min)
-mem_obj.records.to_csv("feature_all.csv")
-pkl.dump(mem_obj, open("price_feature_dataset.pkl", "wb"))
+# mem_obj.records.to_csv("feature_all.csv")
+# pkl.dump(mem_obj, open("price_feature_dataset.pkl", "wb"))
