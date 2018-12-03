@@ -9,6 +9,7 @@ import talib
 import logging
 from talib import abstract
 import time as timer
+import pickle as pkl
 
 cols = ['counter', 'open', 'high', 'low', 'close', 'average', 'volume']
 
@@ -502,13 +503,14 @@ data_collect = [
 ]
 
 mem_obj = memory()
+counter = 0
+future_minutes = 5
+
 for data_idx in range(len(data_collect)):
     data_filename = data_collect[data_idx]
     data_path = '../data/' + data_filename
     data_block = h5py.File(data_path, mode='r')
     keys = list(data_block.keys())
-    future_minutes = 5
-    counter = 0
     for i in range(len(keys)):
         data_cur_min = data_block[keys[i]][:]
         # print(keys[i+future_minutes])
@@ -534,6 +536,7 @@ for data_idx in range(len(data_collect)):
             print(keys[i])
         if i/10000 > 1 and i % 10000 == 0:
             mem_obj.records.to_csv("feature_all.csv")
+            pkl.dump(mem_obj, open("price_feature_dataset_partial.pkl", "wb"))
             # print(data_cur_min)
-
-
+mem_obj.records.to_csv("feature_all.csv")
+pkl.dump(mem_obj, open("price_feature_dataset.pkl", "wb"))
