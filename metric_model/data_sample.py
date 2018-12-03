@@ -534,8 +534,8 @@ for data_idx in range(len(data_collect)):
         counter += 1
         if i % 100 == 0:
             print(keys[i])
-        if i/10000 > 1 and i % 10000 == 0:
-            dt_no = i/10000
+        if counter/30000 > 1 and counter % 30000 == 0:
+            dt_no = counter/30000
             mem_obj.records.to_csv("feature_all_%d.csv" % dt_no)
             pkl.dump(mem_obj.records, open("price_feature_dataset_partial_%d.pkl" % dt_no, "wb"))
             mem_obj.records = None
