@@ -10,6 +10,7 @@ import logging
 from talib import abstract
 import time as timer
 import pickle as pkl
+import sys
 
 cols = ['counter', 'open', 'high', 'low', 'close', 'average', 'volume']
 
@@ -510,6 +511,7 @@ for data_idx in range(len(data_collect)):
     data_filename = data_collect[data_idx]
     data_path = '../data/' + data_filename
     data_block = h5py.File(data_path, mode='r')
+    new_data_block = h5py.File('../data/' + data_collect[data_idx + 1], mode='r')
     keys = list(data_block.keys())
     for i in range(len(keys)):
         data_cur_min = data_block[keys[i]][:]
@@ -519,7 +521,6 @@ for data_idx in range(len(data_collect)):
             fut_time = keys[i+future_minutes]
         else:
             if data_idx+1 < len(data_collect):
-                new_data_block = h5py.File('../data/' + data_collect[data_idx+1], mode='r')
                 new_keys = list(new_data_block.keys())
                 data_fut_min = new_data_block[new_keys[i+future_minutes-len(keys)]][:]
                 fut_time = new_keys[i+future_minutes-len(keys)]
@@ -534,11 +535,14 @@ for data_idx in range(len(data_collect)):
         counter += 1
         if i % 100 == 0:
             print(keys[i])
-        if counter/30000 > 1 and counter % 30000 == 0:
-            dt_no = counter/30000
+        if counter/10000 > 1 and counter % 10000 == 0:
+            print(sys.getsizeof(mem_obj))
+            dt_no = counter/10000
             mem_obj.records.to_csv("feature_all_%d.csv" % dt_no)
             pkl.dump(mem_obj.records, open("price_feature_dataset_partial_%d.pkl" % dt_no, "wb"))
             mem_obj.records = None
             # print(data_cur_min)
+    data_block.close()
+    new_data_block.close()
 # mem_obj.records.to_csv("feature_all.csv")
 # pkl.dump(mem_obj, open("price_feature_dataset.pkl", "wb"))
