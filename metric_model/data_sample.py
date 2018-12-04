@@ -313,7 +313,6 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
         memory.timed_rsi = []
         memory.timed_stochks = []
         memory.timed_stochds = []
-        memory.timed_position = []
         memory.timed_lowerbs = []
         memory.timed_higherbs = []
         memory.timed_middlebs = []
@@ -327,7 +326,6 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
             memory.timed_rsi.append([])
             memory.timed_stochks.append([])
             memory.timed_stochds.append([])
-            memory.timed_position.append([])
             memory.timed_lowerbs.append([])
             memory.timed_higherbs.append([])
             memory.timed_middlebs.append([])
@@ -341,7 +339,6 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
                 memory.timed_rsi[i].append([])
                 memory.timed_stochks[i].append([])
                 memory.timed_stochds[i].append([])
-                memory.timed_position[i].append([])
                 memory.timed_lowerbs[i].append([])
                 memory.timed_higherbs[i].append([])
                 memory.timed_middlebs[i].append([])
@@ -391,6 +388,8 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
             timed_data = np.concatenate((data, volumes.reshape(-1, 1)), axis=1)
 
             memory.timed_data[index].append(timed_data)
+            max_lookback_interval = max_lookback_window * max_time_interval
+            memory.timed_data[index] = memory.timed_data[index][-max_lookback_interval:]
 
             ## deal with data
             highs = get_high(timed_data)
@@ -406,7 +405,6 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
                 memory.timed_low_prices[index][ticker_cnt].append(lows[ticker_cnt])
                 memory.timed_close_prices[index][ticker_cnt].append(closes[ticker_cnt])
                 # clean data that will never be used
-                max_lookback_interval = max_lookback_window*max_time_interval
                 memory.timed_average_prices[index][ticker_cnt] = memory.timed_average_prices[index][ticker_cnt][-max_lookback_interval:]
                 memory.timed_high_prices[index][ticker_cnt] = memory.timed_high_prices[index][ticker_cnt][-max_lookback_interval:]
                 memory.timed_low_prices[index][ticker_cnt] = memory.timed_low_prices[index][ticker_cnt][-max_lookback_interval:]
@@ -514,6 +512,7 @@ for data_idx in range(len(data_collect)):
     data_block = h5py.File(data_path, mode='r')
     new_data_block = h5py.File('../data/' + data_collect[data_idx + 1], mode='r')
     keys = list(data_block.keys())
+    new_keys = list(new_data_block.keys())
     for i in range(len(keys)):
         data_cur_min = data_block[keys[i]][:]
         # print(keys[i+future_minutes])
@@ -522,7 +521,6 @@ for data_idx in range(len(data_collect)):
             fut_time = keys[i+future_minutes]
         else:
             if data_idx+1 < len(data_collect):
-                new_keys = list(new_data_block.keys())
                 data_fut_min = new_data_block[new_keys[i+future_minutes-len(keys)]][:]
                 fut_time = new_keys[i+future_minutes-len(keys)]
             else:
