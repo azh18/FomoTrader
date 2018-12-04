@@ -11,6 +11,7 @@ from talib import abstract
 import time as timer
 import pickle as pkl
 import sys
+import gc
 
 cols = ['counter', 'open', 'high', 'low', 'close', 'average', 'volume']
 
@@ -535,11 +536,13 @@ for data_idx in range(len(data_collect)):
         counter += 1
         if i % 100 == 0:
             print(keys[i])
-        if counter/10000 > 1 and counter % 10000 == 0:
+        if counter/10000 > 0 and counter % 10000 == 0:
             print(sys.getsizeof(mem_obj))
             dt_no = counter/10000
             mem_obj.records.to_csv("feature_all_%d.csv" % dt_no)
             pkl.dump(mem_obj.records, open("price_feature_dataset_partial_%d.pkl" % dt_no, "wb"))
+            del mem_obj.records
+            gc.collect()
             mem_obj.records = None
             # print(data_cur_min)
     data_block.close()
