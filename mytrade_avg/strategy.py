@@ -16,6 +16,11 @@ import pandas as pd
 from pandas import Series
 from talib import abstract
 
+from sklearn.preprocessing import StandardScaler
+
+
+from mytrade_avg.LSTM_Model import *
+
 # from auxiliary import generate_bar, white_soider, black_craw  # auxiliary is a local py file containing some functions
 
 my_cash_balance_lower_limit = 10000.  # Cutting-loss criterion
@@ -295,7 +300,7 @@ TRADE_INTERVAL = 5
 # 2. The strategy function AWAYS returns two things - position and memory:
 # 2.1 position is a np.array (length 4) indicating your desired position of four crypto currencies next minute
 # 2.2 memory is a class containing the information you want to save currently for future use
-
+LSTM_ON = True
 
 def handle_bar(counter,  # a counter for number of minute bars that have already been tested
                time,  # current time in string format such as "2018-07-30 00:30:00"
@@ -335,6 +340,8 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
         memory.macd_dead_cross_cnt = 0
         memory.kd_gold_cross_cnt = 0
         memory.kd_dead_cross_cnt = 0
+
+
 
 
 
@@ -397,6 +404,13 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
                 memory.timed_higherbs[i].append([])
                 memory.timed_middlebs[i].append([])
         # return position_current, memory
+
+    if LSTM_ON == True:
+        if counter == 0:
+            eval_model = FModel(False)
+            memory.predict_model = eval_model
+        else:
+            eval_model = memory.predict_model
 
     if True:
         index = 0
@@ -603,6 +617,7 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
             BBANDS_ON = True
             RSI_ON = True
 
+
             time_interval_index = 1
 
             interval = data_time_interval[time_interval_index]
@@ -648,14 +663,14 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
                 buy_factor = getBuyFactor(position_current[asset_idx], 4)
                 buy_one = list(map(lambda x: x * buy_factor, buy_one))
                 sell_one = list(map(lambda x: x * sell_factor, sell_one))
-                # d("bullish market")
+                d("bullish market")
                 # d(long_trend)
             elif long_trend < 0:
                 sell_factor = getSellFactor(position_current[asset_idx], 4)
                 buy_factor = getBuyFactor(position_current[asset_idx], 2)
                 buy_one = list(map(lambda x: x * buy_factor, buy_one))
                 sell_one = list(map(lambda x: x * sell_factor, sell_one))
-                # d("bearish market")
+                d("bearish market")
                 # d(long_trend)
             else:
                 # maybe in still or shock
@@ -663,7 +678,7 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
                 buy_factor = getBuyFactor(position_current[asset_idx], 2)
                 buy_one = list(map(lambda x: x * buy_factor, buy_one))
                 sell_one = list(map(lambda x: x * sell_factor, sell_one))
-                # d("shock or still market")
+                d("shock or still market")
 
 
 
@@ -691,7 +706,6 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
             macd_value =  memory.timed_macds[time_interval_index][asset_idx][-1]
             macd = get_MACD_sig(macd_value)
 
-
             lowerb = memory.timed_lowerbs[time_interval_index][asset_idx][-1]
             higherb = memory.timed_higherbs[time_interval_index][asset_idx][-1]
             bbands = get_BBANDS_sig(average_prices[asset_idx][-1], lowerb, higherb)
@@ -705,8 +719,54 @@ def handle_bar(counter,  # a counter for number of minute bars that have already
             #                     low_prices[asset_idx][-atr_lookback_window:],
             #                     close_prices[asset_idx][-atr_lookback_window:])
             # atr = get_ATR_sig(average_prices[asset_idx][-1], close_prices[asset_idx][-2], atr_value)
+            lstm = 0
+            if LSTM_ON == True:
 
-            votes = macd + rsi + bbands + stoch
+
+
+                if counter > 5000:
+                    num_step = 48
+                    macds5 = memory.timed_macds[1][asset_idx][-num_step:]
+                    rsi5 = memory.timed_rsi[1][asset_idx][-num_step:]
+                    slowk5 = memory.timed_stochks[1][asset_idx][-num_step:]
+                    slowd5 = memory.timed_stochds[time_interval_index][asset_idx][-num_step:]
+                    lowerb5 = memory.timed_lowerbs[time_interval_index][asset_idx][-num_step:]
+                    middle5 = memory.timed_middlebs[1][asset_idx][-num_step:]
+                    higherb5 = memory.timed_higherbs[time_interval_index][asset_idx][-num_step:]
+                    high5 = memory.timed_high_prices[time_interval_index][asset_idx][-num_step:]
+                    low5 = memory.timed_low_prices[time_interval_index][asset_idx][-num_step:]
+                    avg5 = memory.timed_average_prices[time_interval_index][asset_idx][-num_step:]
+                    cls5 = memory.timed_close_prices[time_interval_index][asset_idx][-num_step:]
+
+                    macdsl = memory.timed_macds[2][asset_idx][-num_step:]
+                    rsil = memory.timed_rsi[2][asset_idx][-num_step:]
+                    slowkl = memory.timed_stochks[2][asset_idx][-num_step:]
+                    slowdl = memory.timed_stochds[2][asset_idx][-num_step:]
+                    lowerbl = memory.timed_lowerbs[2][asset_idx][-num_step:]
+                    middlel = memory.timed_middlebs[2][asset_idx][-num_step:]
+                    higherbl = memory.timed_higherbs[2][asset_idx][-num_step:]
+                    highl = memory.timed_high_prices[2][asset_idx][-num_step:]
+                    lowl = memory.timed_low_prices[2][asset_idx][-num_step:]
+                    avgl = memory.timed_average_prices[2][asset_idx][-num_step:]
+                    clsl = memory.timed_close_prices[2][asset_idx][-num_step:]
+
+                    X_data = np.stack([macds5, rsi5, slowk5, slowd5, lowerb5, higherb5, middle5, high5, low5, avg5,
+                                       cls5, macdsl, rsil, slowkl, slowdl, lowerbl, higherbl, middlel, highl, lowl,
+                                       avgl, clsl], axis=1)
+                    result = predict(eval_model, X_data)
+                    if result > memory.timed_average_prices[0][asset_idx][-1]:
+                        lstm = 2
+                    else:
+                        lstm = -2
+
+                    print(result)
+
+
+
+
+
+
+            votes = macd + rsi + bbands + stoch + lstm
             # votes = bbands
             # votes = stoch + macd
             # votes = macd
